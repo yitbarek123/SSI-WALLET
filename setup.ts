@@ -41,9 +41,7 @@ import { CredentialPlugin, ICredentialIssuer, ICredentialVerifier } from '@veram
 
 import { DIDComm, DIDCommHttpTransport, DIDCommMessageHandler, IDIDComm ,   PickupRecipientMessageHandler, CoordinateMediationRecipientMessageHandler} from  '@veramo/did-comm'
 
-import { IDIDCommMessage } from '@veramo/did-comm'
 
-import { SaveMessageHandler } from './saveMessageHandler'
 
 import { MessageHandler } from '@veramo/message-handler'
 
@@ -129,18 +127,8 @@ export const agent = createAgent<
 
       }),
       
-      new DataStore(dbConnection),
+      new DataStore(dbConnection)
 
-      new MessageHandler({
-        messageHandlers: [
-          new DIDCommMessageHandler(),
-          new SaveMessageHandler(),
-          new CoordinateMediationRecipientMessageHandler(),
-          new PickupRecipientMessageHandler(),
-          //new JwtMessageHandler(),
-          //new W3cMessageHandler(),
-          //new SdrMessageHandler(),
-        ],
-      })      
+    
   ],
 })
