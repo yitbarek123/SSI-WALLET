@@ -12,6 +12,7 @@
     "@babel/plugin-syntax-import-assertions": "^7.20.0",
     "@ethersproject/shims": "^5.7.0",
     "@expo/webpack-config": "^0.17.2",
+    "@react-native-async-storage/async-storage": "^1.18.1",
     "@sinonjs/text-encoding": "^0.7.2",
     "@veramo/core": "^5.1.2",
     "@veramo/credential-w3c": "^5.1.4",

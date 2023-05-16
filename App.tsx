@@ -6,7 +6,6 @@ import 'cross-fetch/polyfill'
 // filename: App.tsx
 
 // ... shims
-import { v4 } from 'uuid'
 
 import React, { useEffect, useState } from 'react'
 import { SafeAreaView, ScrollView, View, Text, Button,Modal, TextInput,StyleSheet } from 'react-native'
@@ -14,20 +13,18 @@ import { SafeAreaView, ScrollView, View, Text, Button,Modal, TextInput,StyleShee
 // Import the agent from our earlier setup
 import { agent } from './setup'
 // import some data types:
-import { DIDResolutionResult, IIdentifier, VerifiableCredential, VerifiablePresentation } from '@veramo/core'
+import { IIdentifier, VerifiableCredential, VerifiablePresentation } from '@veramo/core'
 
-import { IVerifyResult } from '@veramo/core'
 
-import { IDIDCommMessage } from '@veramo/did-comm'
 
 import { SelectList } from 'react-native-dropdown-select-list'
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 
 const App = () => {
   const [identifiers, setIdentifiers] = useState<IIdentifier[]>([])
-  const [resolutionResult, setResolutionResult] = useState<DIDResolutionResult | undefined>()
 
   const [modalDIDVisible, setModalDIDVisible] = useState(false);
 
@@ -37,18 +34,30 @@ const App = () => {
 
   const [selected, setSelected] = React.useState("");
 
-  const [selectedVC, setSelectedVC] = React.useState("");
 
-  const [textTag, chooseTag] = React.useState('');
 
   const [modalMessagesVisible, setModalMessagesVisible] = useState(false);
   const [lastMessage, setLastMessage] = React.useState("");
+  const [modalVCCurrent,setModalVCCurrent] = useState(false);
+  const [modalVCCurrent2,setModalVCCurrent2] = useState(false);
+
+  const [currentVC, setVCCurrent] = React.useState("");
+
+  const [currentVC2, setVCCurrent2] = React.useState("");
+
+  const [currentID, setID] = React.useState("");
+
+  const [currentVP, setVPCurrent] = React.useState("");
+
 
   const [modalVerifyVisible, setModalVerifyVisible] = useState(false);
 
-  const [VP, setVP] = React.useState('');
 
-  const [verifierDID, setVerifierDID] = React.useState('');
+  const mediatorDID = 'did:web:dev-didcomm-mediator.herokuapp.com'
+
+
+
+
 
   const didmethods = [
     {key:'1', value:'did:peer', disabled:false},
@@ -56,81 +65,32 @@ const App = () => {
     {key:'3', value:'did:web'}
   ]
 
-  const dids = [
-    {key:'1', value:'did:peer:2.Ez6LScYMSsRyTEHNiiN2uu7JbRvLN7S8CXhcwwXeL8mbQPUDQ.Vz6MktvLmt6uFgcLVtuhmve17GL3WznVGLZm1CJDmJJZPnsZD.SeyJpZCI6IjEyMzQiLCJ0IjoiZG0iLCJzIjoiZGlkOndlYjpkZXYtZGlkY29tbS1tZWRpYXRvci5oZXJva3VhcHAuY29tIiwiZGVzY3JpcHRpb24iOiJhIERJRENvbW0gZW5kcG9pbnQifQ', disabled:false},
-    {key:'2', value:'did2'},
-    {key:'3', value:'did3'}
-  ]
 
-  const vcs = [
-    {key:'1', value:'vc1', disabled:false},
-    {key:'2', value:'vc2'},
-    {key:'3', value:'vc3'}
-  ]
-  // Resolve a DID
-  const resolveDID = async (did: string) => {
-    const result = await agent.resolveDid({ didUrl: did })
-    console.log(JSON.stringify(result, null, 2))
-    setResolutionResult(result)
-  }
+const saveData = async (data) => {
 
-  const STATUS_REQUEST_MESSAGE_TYPE =
-  'https://didcomm.org/messagepickup/3.0/status-request'
-
-  const DELIVERY_REQUEST_MESSAGE_TYPE =
-  'https://didcomm.org/messagepickup/3.0/delivery-request'
-  const MEDIATE_REQUEST_MESSAGE_TYPE = 'https://didcomm.org/coordinate-mediation/2.0/mediate-request'
-
-  function createStatusRequestMessage(
-    recipientDidUrl: string,
-    mediatorDidUrl: string,
-    ): IDIDCommMessage {
-    return {
-      id: v4(),
-      type: STATUS_REQUEST_MESSAGE_TYPE,
-      to: mediatorDidUrl,
-      from: recipientDidUrl,
-      return_route: 'all',
-      body: {},
-    }
-  }
-
-  function deliveryRequestMessage(
-    recipientDidUrl: string,
-    mediatorDidUrl: string,
-  ): IDIDCommMessage {
-    return {
-      id: v4(),
-      type: DELIVERY_REQUEST_MESSAGE_TYPE,
-      to: mediatorDidUrl,
-      from: recipientDidUrl,
-      return_route: 'all',
-      body: { limit: 2 },
-    }
-  }
-
-  function createMediateRequestMessage(
-    recipientDidUrl: string,
-    mediatorDidUrl: string,
-  ): IDIDCommMessage {
-    return {
-      type: MEDIATE_REQUEST_MESSAGE_TYPE,
-      from: recipientDidUrl,
-      to: mediatorDidUrl,
-      id: v4(),
-      return_route: 'all',
-      created_time: (new Date()).toISOString(),
-      body: {},
-    }
-  }
-
-  const mediatorDID = 'did:web:dev-didcomm-mediator.herokuapp.com'
-
+    try {
+      let keys = await AsyncStorage.getAllKeys();
+      let filteredKeysVC = keys.filter(key => key.startsWith('vc'));
+  
 
   
+  
+      let totalVCS= filteredKeysVC.length + 1;
+      console.log(filteredKeysVC.length)
+
+      await AsyncStorage.setItem('vc'+totalVCS, JSON.stringify(data));
+      console.log(data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
 
   // Add the new identifier to state
   const createIdentifier = async () => {
+    let keys = await AsyncStorage.getAllKeys();
+    let filteredKeysID = keys.filter(key => key.startsWith('id'));
+
     const _id = await agent.didManagerCreate({
       // alias: 'alice',
       provider: selected,
@@ -146,36 +106,37 @@ const App = () => {
     })
 
 
-    const requestMediationMessage = createMediateRequestMessage(_id.did, mediatorDID)
-    console.log(_id)
+    let totalIDS= filteredKeysID.length + 1;
+    console.log(filteredKeysID.length)
+
+    await AsyncStorage.setItem('id'+totalIDS, JSON.stringify(_id));
+
     setIdentifiers((s) => s.concat([_id]))
   }
 
   // Make request for VC
   const requestVc = async () => {
-      console.log("university's did: ", selectedVC)
-      setModalVCVisible(false)
-      const message = {
-        type: 'test',
-        to: selectedVC,
-        from: identifiers[identifiers.length-2].did,
-        id: '1250',
-        body: { hello: 'world het' },
-      }
-      sendMessage(selectedVC,message)
+      console.log("university's did: ", currentID)
+
+      let name="john"
+      console.log(JSON.parse(currentID).did)
+      const apiUrl = `http://192.168.0.127:5000/createVC?name=${name}&did=${JSON.parse(currentID).did}`
+  
+      return fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+          // do something with the response data
+          console.log(data);
+          saveData(data)
+        })
+        .catch(error => {
+          // handle any errors
+          console.log(name)
+          console.error(error);
+        });
   }
 
-  // Make request for VC
-  const verifyVP = async () => {
-    const message = {
-      type: 'test',
-      to: verifierDID,
-      from: identifiers[identifiers.length-2].did,
-      id: '1250',
-      body: { hello: VP },
-    }
-    sendMessage(verifierDID,message)
-  }
+
   // Check for existing identifers on load and set them to state
   useEffect(() => {
     const getIdentifiers = async () => {
@@ -189,7 +150,6 @@ const App = () => {
     getIdentifiers()
   }, [])
 
-  const [credential, setCredential] = useState<VerifiableCredential | undefined>()
 
   const [presentation, setPresentation] = useState<VerifiablePresentation | undefined>()
 
@@ -197,7 +157,12 @@ const App = () => {
 
 
   const createPresentation = async () => {
-    if (credential) {
+    //if (credential) {
+      let keys = await AsyncStorage.getAllKeys();
+      let filteredKeysVP = keys.filter(key => key.startsWith('vp'));
+  
+      let totalVPS= filteredKeysVP.length + 1;
+      console.log(filteredKeysVP.length)
       const verifiablePresentation = await agent.createVerifiablePresentation(
        { 
         presentation: {
@@ -205,100 +170,96 @@ const App = () => {
           verifier: [identifiers[0].did],
           '@context': ['https://www.w3.org/2018/credentials/v1'],
           type: ['VerifiablePresentation'],
-          verifiableCredential: [credential],
+          verifiableCredential: [JSON.parse(currentVC2)],
         },
-        //challenge: 'VERAMO',
-        // TODO: QueryFailedError: SQLITE_CONSTRAINT: NOT NULL constraint failed: presentation.issuanceDate
-        // Currently LD Presentations are NEVER saved. (they have no issuanceDate)
-        //save: true,
         proofFormat: 'jwt',
       }
       
       )
-
-    //console.log(VerifiablePresentation)
+    console.log(currentVC2)
+    console.log(VerifiablePresentation)
 
       setPresentation(verifiablePresentation)
+      await AsyncStorage.setItem('vp'+totalVPS, JSON.stringify(verifiablePresentation));
+
+    //}
+  }
+
+
+
+
+
+  
+
+  const  setCurrentVC= async (value) => {
+
+    setVCCurrent(value)
+    setModalVCCurrent(true)
+  }
+
+  const  setCurrentVC2= async (value) => {
+    setVCCurrent2(value)
+    //setModalVCCurrent2(true)
+
+  }
+
+  const  setCurrentID= async (value) => {
+    setID(value)
+    //setModalVCCurrent2(true)
+
+  }
+
+  const  setCurrentVP= async (value) => {
+    setVPCurrent(value)
+    //setModalVCCurrent2(true)
+
+  }
+
+  const  requestVerification= async () => {
+
+
+  }
+
+
+
+  const [data, setData] = useState([]);
+
+  const [dataID, setDataID] = useState([]);
+
+  const [dataVC, setDataVC] = useState([]);
+  const [dataVP, setDataVP] = useState([]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData();
+      console.log("yes")
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const data = await AsyncStorage.multiGet(keys);
+      setData(data);
+
+      const filteredKeysID = keys.filter(key => key.startsWith('id'));
+      const dataID = await AsyncStorage.multiGet(filteredKeysID);
+      setDataID(dataID);
+
+      const filteredKeysVC = keys.filter(key => key.startsWith('vc'));
+      const dataVC = await AsyncStorage.multiGet(filteredKeysVC);
+      setDataVC(dataVC);
+
+      const filteredKeysVP = keys.filter(key => key.startsWith('vp'));
+      const dataVP = await AsyncStorage.multiGet(filteredKeysVP);
+      setDataVP(dataVP);
+
+    } catch (error) {
+      console.log(error);
     }
-  }
-
-  const [verificationResult, setVerificationResult] = useState<IVerifyResult | undefined>()
-
-
-
-  const sendMessage =async (issuerDid,message) => {
-    
-
-    const packedMessage = await agent.packDIDCommMessage({
-      packing: 'none',
-      message,
-    })
-    const result = await agent.sendDIDCommMessage({
-      messageId: '1250',
-      packedMessage,
-      recipientDidUrl: identifiers[identifiers.length-1].did,
-    })
-    console.log(result)
-  }
-
-
-
-  const receivedMessage =async () => {
-    
-
-    try{
-            const statusMessage = await createStatusRequestMessage(
-              identifiers[identifiers.length-1].did,
-              mediatorDID)
-            
-            const packedStatusMessage = await agent.packDIDCommMessage({
-              packing: 'none',
-              message: statusMessage,
-            })
-
-            const result1= await agent.sendDIDCommMessage({
-              messageId: statusMessage.id,
-              packedMessage: packedStatusMessage,
-              recipientDidUrl: mediatorDID,
-            })
-            console.log("result1: ", result1)
-
-            const deliveryMessage = await deliveryRequestMessage(
-              identifiers[identifiers.length-1].did,
-              'did:web:dev-didcomm-mediator.herokuapp.com')
-
-            const packedDeliveryMessage = await agent.packDIDCommMessage({
-              packing: 'none',
-              message: deliveryMessage,
-            })
-            const result=await agent.sendDIDCommMessage({
-              messageId: deliveryMessage.id,
-              packedMessage: packedDeliveryMessage,
-              recipientDidUrl: 'did:web:dev-didcomm-mediator.herokuapp.com',
-            })
-
-  }
-  catch(e){
-
-  }
-  finally{
-    const t3=  await agent.dataStoreGetMessage({ })
-    //console.log("recieved", t3)
-    setLastMessage(t3)
-    console.log("last message",JSON.stringify(lastMessage))
-    setModalMessagesVisible(true)
-  }
-    //console.log(result)
-
-    //console.log(packedStatusMessage)
-  }
-
-  const getMessage =async () => {
-    
-
-    
-    //console.log(packedStatusMessag  e)
-  }
+  };
 
   return (
     <SafeAreaView>
@@ -307,11 +268,16 @@ const App = () => {
         {/* previously added code */}
 
 
-
         <View style={{ padding: 20 }}>
-          <Text style={{ fontSize: 10 }}>{JSON.stringify(credential, null, 2)}</Text>
-        </View>
 
+        <View>
+      {data.map(([key, value]) => (
+        <Button title={key} onPress={() => setCurrentVC(value)} >
+          {key}: {value}
+        </Button>
+      ))}
+    </View>
+  </View>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center',flexDirection: "row" }}>
 
         <Modal
@@ -349,18 +315,20 @@ const App = () => {
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <View style={{ backgroundColor: 'white', padding: 20 }}>
 
-          <SelectList 
-                setSelected={(val) => setSelectedVC(val)} 
-                data={dids} 
-                save="value"
-            />
 
-          <TextInput
-                  onChangeText={chooseTag}
-                  placeholder = "choose a tag                                                                         "
-                  
-                  value={textTag}
-                />
+
+            <View style={{ padding: 20 }}>
+
+            <View>
+            {dataID.map(([key, value]) => (
+            <Button title={key} onPress={() => setCurrentID(value)} >
+              {key}: {value}
+            </Button>
+            ))}
+            </View>
+            </View>
+
+
             <Button title="Request" onPress={() => requestVc()} />
 
             <Button title="Back" onPress={() => setModalVCVisible(false)} />
@@ -379,19 +347,22 @@ const App = () => {
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <View style={{ backgroundColor: 'white', padding: 20 }}>
 
-          <SelectList 
-                setSelected={(val) => setSelected(val)} 
-                data={vcs} 
-                save="value"
-            />
 
-          <TextInput
-                  onChangeText={chooseTag}
-                  placeholder = "choose a tag                                                                          "
-                  
-                  value={textTag}
-                />
-            <Button title="ISSUE" onPress={() => requestVc()} />
+
+            <View style={{ padding: 20 }}>
+
+            <View>
+            {dataVC.map(([key, value]) => (
+            <Button title={key} onPress={() => setCurrentVC2(value)} >
+              {key}: {value}
+            </Button>
+            ))}
+            </View>
+            </View>
+
+            <Button title="Get selected" onPress={() =>     setModalVCCurrent2(true)} />
+
+            <Button title="Create Presentation" onPress={() =>     createPresentation()} />
 
             <Button title="Back" onPress={() => setModalVPVisible(false)} />
           </View>
@@ -426,6 +397,61 @@ const App = () => {
         </View>
       </Modal>
       
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVCCurrent}
+        onRequestClose={() => {
+          setModalVCCurrent(false);
+        }}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <View style={{ backgroundColor: 'white', padding: 20 }}>
+
+
+
+          <View style={{ marginBottom: 50, marginTop: 20 }}>
+              
+           
+            
+            <Text selectable={true}>
+                  {JSON.stringify(currentVC)}
+            </Text>
+          
+          </View>
+
+            <Button title="Back" onPress={() => setModalVCCurrent(false)} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVCCurrent2}
+        onRequestClose={() => {
+          setModalVCCurrent2(false);
+        }}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <View style={{ backgroundColor: 'white', padding: 20 }}>
+
+
+
+          <View style={{ marginBottom: 50, marginTop: 20 }}>
+              
+           
+            
+            <Text selectable={true}>
+                  {JSON.stringify(currentVC2)}
+            </Text>
+          
+          </View>
+
+            <Button title="Back" onPress={() => setModalVCCurrent2(false)} />
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         animationType="slide"
@@ -438,20 +464,20 @@ const App = () => {
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <View style={{ backgroundColor: 'white', padding: 20 }}>
 
+            <View style={{ padding: 20 }}>
 
-          <TextInput
-                  onChangeText={setVP}
-                  placeholder = "VP to be verified                                                             "
-                  value={VP}
-                />
+            <View>
+            {dataVP.map(([key, value]) => (
+            <Button title={key} onPress={() => setCurrentVP(value)} >
+              {key}: {value}
+            </Button>
+            ))}
+            </View>
+            </View>
 
-          <TextInput
-                  onChangeText={setVerifierDID}
-                  placeholder = "Verifier DID                                                             "
-                  value={verifierDID}
-                />
-            <Button title="verify" onPress={() => verifyVP()} />
 
+            <Button title="request verification" onPress={() =>    requestVerification()} />
+          
             <Button title="Back" onPress={() => setModalVerifyVisible(false)} />
           </View>
         </View>
@@ -460,10 +486,12 @@ const App = () => {
         <Button title={'New DID'} onPress={() => setModalDIDVisible(true)}  />
         <Button title={'Request'} onPress={() => setModalVCVisible(true)}  />
         <Button title={'Present'} onPress={() => setModalVPVisible(true)}  />
-        <Button title={'Recieved'} onPress={() => receivedMessage()}  />
         <Button title={'Verify'} onPress={() => setModalVerifyVisible(true)}  />
 
+        
         </View>
+
+
 
       </ScrollView>
     </SafeAreaView>
