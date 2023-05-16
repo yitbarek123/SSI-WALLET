@@ -17,6 +17,8 @@ import { EthrDIDProvider } from '@veramo/did-provider-ethr'
 
 import { PeerDIDProvider } from '@veramo/did-provider-peer'
 
+import { WebDIDProvider } from '@veramo/did-provider-web'
+
 // A key management system that uses a local database to store keys (used by KeyManager)
 import { KeyManagementSystem, SecretBox } from '@veramo/kms-local'
 
@@ -117,9 +119,20 @@ export const agent = createAgent<
       providers: {
 
         'did:peer': new PeerDIDProvider({defaultKms:'local'}),
+        'did:web' : new WebDIDProvider({defaultKms:'local'}),
+        'did:ethr:goerli': new EthrDIDProvider({
+          defaultKms: 'local',
+          network: 'goerli',
+          name: 'goerli',
+          rpcUrl: 'https://goerli.infura.io/v3/' + INFURA_PROJECT_ID,
+          gas: 1000001,
+          ttl: 31104001,
+        }),
 
       },
     }),
+
+
     new DIDResolverPlugin({
         ...ethrDidResolver({ infuraProjectId: INFURA_PROJECT_ID }), // and set it up to support `did:ethr`
         ...webDidResolver(), // and `did:web`
