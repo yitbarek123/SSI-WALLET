@@ -61,7 +61,7 @@ const App = () => {
 
   const didmethods = [
     {key:'1', value:'did:peer', disabled:false},
-    {key:'2', value:'did:ethr'},
+    {key:'2', value:'did:ethr:goerli'},
     {key:'3', value:'did:web'}
   ]
 
@@ -90,7 +90,7 @@ const saveData = async (data) => {
   const createIdentifier = async () => {
     let keys = await AsyncStorage.getAllKeys();
     let filteredKeysID = keys.filter(key => key.startsWith('id'));
-
+    console.log(selected)
     const _id = await agent.didManagerCreate({
       // alias: 'alice',
       provider: selected,
