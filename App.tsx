@@ -8,7 +8,7 @@ import 'cross-fetch/polyfill'
 // ... shims
 
 import React, { useEffect, useState } from 'react'
-import { SafeAreaView, ScrollView, View, Text, Button,Modal, TextInput,StyleSheet } from 'react-native'
+import { SafeAreaView, ScrollView, View, Text, Button,Modal, TextInput,StyleSheet,Alert } from 'react-native'
 
 // Import the agent from our earlier setup
 import { agent } from './setup'
@@ -166,14 +166,33 @@ const saveData = async (data) => {
       const verifiablePresentation = await agent.createVerifiablePresentation(
        { 
         presentation: {
-          holder: identifiers[0].did,
-          verifier: [identifiers[0].did],
-          '@context': ['https://www.w3.org/2018/credentials/v1'],
-          type: ['VerifiablePresentation'],
-          verifiableCredential: [JSON.parse(currentVC2)],
-        },
-        proofFormat: 'jwt',
-      }
+          
+            holder: identifiers[0].did,
+            verifiableCredential: [
+              JSON.parse(currentVC2)
+        
+            ],
+            type: [
+              "VerifiablePresentation"
+            ],
+            "@context": "https://www.w3.org/2018/credentials/v1",
+            verifier: [
+              "did:ethr:goerli:0x039f2fe1775bb29c01d92f2366eb5c9ac56106d72c9048e7e12e1b9b5e22e3108b"
+            ],
+            issuanceDate: "2023-05-17T15:09:33.000Z",
+            expirationDate: "2023-08-17T15:09:33.000Z"
+          },
+          challenge: "string",
+          domain: "string",
+          proofFormat: "jwt",
+          removeOriginalFields: true,
+          keyRef: "string",
+          fetchRemoteContexts: true,
+          additionalProp1: "string",
+          additionalProp2: "string",
+          additionalProp3: "string"
+        }
+      
       
       )
     console.log(currentVC2)
@@ -216,6 +235,45 @@ const saveData = async (data) => {
   }
 
   const  requestVerification= async () => {
+    console.log("VP")
+    console.log(currentVP)
+    const url = `http://192.168.0.127:5001/verifyVP`
+
+
+  
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+
+      body: JSON.stringify(currentVP),
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('API request failed');
+        }
+        return response.json();
+      })
+      .then(data => {
+        Alert.alert(
+          'Result',
+          data.verified.toString(),
+          [
+            {
+              text: 'OK',
+              onPress: () => console.log('OK pressed'),
+              style: 'default',
+            },
+          ],
+          { cancelable: true }
+        );
+        console.log(data);
+      })
+      .catch(error => {
+        console.error(error);
+      });
+
 
 
   }
