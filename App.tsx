@@ -17,6 +17,7 @@ import { IIdentifier, VerifiableCredential, VerifiablePresentation } from '@vera
 
 
 
+
 import { SelectList } from 'react-native-dropdown-select-list'
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -31,6 +32,9 @@ const App = () => {
   const [modalVCVisible, setModalVCVisible] = useState(false);
 
   const [modalVPVisible, setModalVPVisible] = useState(false);
+
+  const [modalClaimVisible, setModalClaimVisible] = useState(false);
+
 
   const [selected, setSelected] = React.useState("");
 
@@ -49,9 +53,13 @@ const App = () => {
 
   const [currentVP, setVPCurrent] = React.useState("");
 
+  const [currentClaim, setCurrentClaim] = React.useState("");
+  const [sdrVC, setSdrVC] = React.useState("");
+
 
   const [modalVerifyVisible, setModalVerifyVisible] = useState(false);
 
+  const [modalSDRVisible, setModalSDRVisible] = useState(false);
 
   const mediatorDID = 'did:web:dev-didcomm-mediator.herokuapp.com'
 
@@ -86,6 +94,35 @@ const saveData = async (data) => {
   };
 
 
+  const saveDataSdr = async (data) => {
+
+    try {
+      let keys = await AsyncStorage.getAllKeys();
+      let filteredKeysVC = keys.filter(key => key.startsWith('vc-sdr'));
+  
+
+  
+  
+      let totalVCS= filteredKeysVC.length + 1;
+      console.log(filteredKeysVC.length)
+
+      await AsyncStorage.setItem('vc-sdr'+totalVCS, JSON.stringify(data));
+      console.log(data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const saveClaim = async (data) => {
+
+    try {
+  
+      await AsyncStorage.setItem('claim-'+data, JSON.stringify(data));
+      console.log(data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   // Add the new identifier to state
   const createIdentifier = async () => {
     let keys = await AsyncStorage.getAllKeys();
@@ -119,8 +156,11 @@ const saveData = async (data) => {
       console.log("university's did: ", currentID)
 
       let name="john"
+      let degree="masters-degree"
+      let age="38"
+
       console.log(JSON.parse(currentID).did)
-      const apiUrl = `http://192.168.0.127:5000/createVC?name=${name}&did=${JSON.parse(currentID).did}`
+      const apiUrl = `http://192.168.0.127:5000/createVC?age=${age}&degree=${degree}&name=${name}&did=${JSON.parse(currentID).did}`
   
       return fetch(apiUrl)
         .then(response => response.json())
@@ -205,6 +245,39 @@ const saveData = async (data) => {
   }
 
 
+  const createSDR = async (claim,vc) => {  
+      const sdrJwt = await agent.createSelectiveDisclosureRequest({
+        
+          "data": {
+            "issuer": identifiers[0].did,
+            "subject": "string",
+            "replyUrl": "string",
+            "tag": "string",
+            "claims": [
+              claim
+            ],
+            "credentials": [
+              vc
+            ]
+          }
+        
+      })
+
+      console.log(sdrJwt)
+      const apiUrl = `http://192.168.0.127:5000/createSD?sdrJwt=${sdrJwt}`
+  
+      return fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+          // do something with the response data
+          console.log(data);
+          saveDataSdr(data)
+        })
+        .catch(error => {
+          // handle any errors
+          console.error(error);
+        });
+  }
 
 
 
@@ -234,6 +307,50 @@ const saveData = async (data) => {
 
   }
 
+  const  requestSDR= async () => {
+    console.log(currentClaim)
+    //console.log(sdrVC)
+    const jsonObject = JSON.parse(sdrVC).credentialSubject
+    let claim = {}
+    Object.entries(jsonObject).forEach(([key, value]) => {
+      console.log('"'+key+'"');
+      if(currentClaim=='"'+key+'"'){
+        claim[key]=value
+      }
+      // Output:
+      // key1 value1
+      // key2 value2
+      // key3 value3
+    });
+    console.log(claim)
+    createSDR(claim,sdrVC)
+    //setModalVCCurrent2(true)
+
+  }
+
+  const  getSDR= async (value) => {
+    setSdrVC(value)
+    console.log(JSON.parse(value).credentialSubject)
+    const jsonObject = JSON.parse(value).credentialSubject
+    Object.entries(jsonObject).forEach(([key, value]) => {
+      console.log(key, value);
+      saveClaim(key)
+      // Output:
+      // key1 value1
+      // key2 value2
+      // key3 value3
+    });
+    const keys = await AsyncStorage.getAllKeys();
+
+
+    const filteredKeysID = keys.filter(key => key.startsWith('claim'));
+    const dataClaim = await AsyncStorage.multiGet(filteredKeysID);
+    setDataClaim(dataClaim);
+    
+    //setModalVCCurrent2(true)
+    setModalClaimVisible(true)
+
+  }
   const  requestVerification= async () => {
     console.log("VP")
     console.log(currentVP)
@@ -284,6 +401,9 @@ const saveData = async (data) => {
 
   const [dataID, setDataID] = useState([]);
 
+  const [dataClaim, setDataClaim] = useState([]);
+  
+
   const [dataVC, setDataVC] = useState([]);
   const [dataVP, setDataVP] = useState([]);
 
@@ -300,12 +420,11 @@ const saveData = async (data) => {
     try {
       const keys = await AsyncStorage.getAllKeys();
       const data = await AsyncStorage.multiGet(keys);
-      setData(data);
+      //setData(dataVC);
 
       const filteredKeysID = keys.filter(key => key.startsWith('id'));
       const dataID = await AsyncStorage.multiGet(filteredKeysID);
       setDataID(dataID);
-
       const filteredKeysVC = keys.filter(key => key.startsWith('vc'));
       const dataVC = await AsyncStorage.multiGet(filteredKeysVC);
       setDataVC(dataVC);
@@ -313,10 +432,29 @@ const saveData = async (data) => {
       const filteredKeysVP = keys.filter(key => key.startsWith('vp'));
       const dataVP = await AsyncStorage.multiGet(filteredKeysVP);
       setDataVP(dataVP);
-
+      
     } catch (error) {
       console.log(error);
     }
+  };
+
+  const removeClaim = async () => {
+    let prefix="claim"
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const keysToRemove = keys.filter((key) => key.startsWith(prefix));
+  
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove);
+        console.log('Keys removed successfully:', keysToRemove);
+      } else {
+        console.log('No keys found with the specified prefix.');
+      }
+    } catch (error) {
+      console.log('Error removing keys:', error);
+    }
+    setDataClaim([])
+    setModalClaimVisible(false)
   };
 
   return (
@@ -329,11 +467,28 @@ const saveData = async (data) => {
         <View style={{ padding: 20 }}>
 
         <View>
-      {data.map(([key, value]) => (
+      {dataVC.map(([key, value]) => (
         <Button title={key} onPress={() => setCurrentVC(value)} >
           {key}: {value}
         </Button>
       ))}
+      
+    </View>
+    <View>
+      {dataID.map(([key, value]) => (
+        <Button title={key} onPress={() => setCurrentVC(value)} >
+          {key}: {value}
+        </Button>
+      ))}
+      
+    </View>
+    <View>
+      {dataVP.map(([key, value]) => (
+        <Button title={key} onPress={() => setCurrentVC(value)} >
+          {key}: {value}
+        </Button>
+      ))}
+      
     </View>
   </View>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center',flexDirection: "row" }}>
@@ -357,6 +512,34 @@ const saveData = async (data) => {
             <Button title="Create" onPress={() => createIdentifier()} />
 
             <Button title="Back" onPress={() => setModalDIDVisible(false)} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalClaimVisible}
+        onRequestClose={() => {
+          setModalClaimVisible(false);
+        }}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <View style={{ backgroundColor: 'white', padding: 20 }}>
+
+          <View style={{ padding: 20 }}>
+
+          <View>
+          {dataClaim.map(([key, value]) => (
+          <Button title={key} onPress={() => setCurrentClaim(value)} >
+            {key}: {value}
+          </Button>
+          ))}
+          </View>
+          </View>
+            <Button title="Request SDR" onPress={() => requestSDR()} />
+
+            <Button title="Back" onPress={() => removeClaim()} />
           </View>
         </View>
       </Modal>
@@ -541,10 +724,41 @@ const saveData = async (data) => {
         </View>
       </Modal>
 
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalSDRVisible}
+        onRequestClose={() => {
+          setModalSDRVisible(false);
+        }}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <View style={{ backgroundColor: 'white', padding: 20 }}>
+
+            <View style={{ padding: 20 }}>
+
+            <View>
+            {dataVC.map(([key, value]) => (
+            <Button title={key} onPress={() => getSDR(value)} >
+              {key}: {value}
+            </Button>
+            ))}
+            </View>
+            </View>
+
+
+          
+            <Button title="Back" onPress={() => setModalSDRVisible(false)} />
+          </View>
+        </View>
+      </Modal>
+
         <Button title={'New DID'} onPress={() => setModalDIDVisible(true)}  />
         <Button title={'Request'} onPress={() => setModalVCVisible(true)}  />
         <Button title={'Present'} onPress={() => setModalVPVisible(true)}  />
         <Button title={'Verify'} onPress={() => setModalVerifyVisible(true)}  />
+        <Button title={'SDR'} onPress={() => setModalSDRVisible(true)}  />
 
         
         </View>
