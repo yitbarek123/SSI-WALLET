@@ -43,7 +43,7 @@ import { CredentialPlugin, ICredentialIssuer, ICredentialVerifier } from '@veram
 
 import { DIDComm, DIDCommHttpTransport, DIDCommMessageHandler, IDIDComm ,   PickupRecipientMessageHandler, CoordinateMediationRecipientMessageHandler} from  '@veramo/did-comm'
 
-
+import {ISelectiveDisclosure,SelectiveDisclosure} from '@veramo/selective-disclosure'
 
 import { MessageHandler } from '@veramo/message-handler'
 
@@ -97,14 +97,14 @@ let dbConnection = new DataSource({
 
 
 export const agent = createAgent<
-  IDIDManager & IKeyManager & IDataStore & IDataStoreORM & IResolver & ICredentialIssuer & ICredentialVerifier & IDIDComm
+  IDIDManager & IKeyManager & IDataStore & IDataStoreORM & IResolver & ICredentialIssuer & ICredentialVerifier & IDIDComm & ISelectiveDisclosure
 >({
   // we also add the ICredentialIssuer & ICredentialVerifier plugin interface
   plugins: [
     //
     // ... previously added plugins
     //
-
+    new SelectiveDisclosure(),
     new DIDComm([new DIDCommHttpTransport()]),
     new CredentialPlugin(),
     new KeyManager({
