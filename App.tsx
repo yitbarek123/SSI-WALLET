@@ -47,13 +47,14 @@ const App = () => {
 
   const [currentVC, setVCCurrent] = React.useState("");
 
-  const [currentVC2, setVCCurrent2] = React.useState("");
+  //const [currentVC2, setVCCurrent2] = React.useState("");
+  const [currentVC2, setVCCurrent2] = React.useState([]);
 
   const [currentID, setID] = React.useState("");
 
   const [currentVP, setVPCurrent] = React.useState("");
 
-  const [currentClaim, setCurrentClaim] = React.useState("");
+  const [currentClaim, setCurrentClaim] = React.useState([]);
   const [sdrVC, setSdrVC] = React.useState("");
 
 
@@ -208,10 +209,10 @@ const saveData = async (data) => {
         presentation: {
           
             holder: identifiers[0].did,
-            verifiableCredential: [
-              JSON.parse(currentVC2)
+            verifiableCredential: 
+              currentVC2
         
-            ],
+            ,
             type: [
               "VerifiablePresentation"
             ],
@@ -290,9 +291,18 @@ const saveData = async (data) => {
   }
 
   const  setCurrentVC2= async (value) => {
-    setVCCurrent2(value)
+    //setVCCurrent2(value)
     //setModalVCCurrent2(true)
-
+    console.log(value)
+    //let myVariable: string;
+    //myVariable=value
+    //let v:string = myVariable.replace(/"/g, '')
+    if (!currentVC2.includes(value)){
+      //setCurrentVC2([...currentVC2 ,value])
+      setVCCurrent2([...currentVC2 , JSON.parse(value)])
+    }
+    console.log(currentVC2)
+    //setVCCurrent2([])
   }
 
   const  setCurrentID= async (value) => {
@@ -307,21 +317,41 @@ const saveData = async (data) => {
 
   }
 
+  const  setCurrentClaims= async (value) => {
+    let myVariable: string;
+    myVariable=value
+    let v:string = myVariable.replace(/"/g, '')
+    if (!currentClaim.includes(v)){
+      setCurrentClaim([...currentClaim ,v])
+    }
+    console.log(currentClaim)
+    
+    //setCurrentClaim([])
+
+
+  }
+
   const  requestSDR= async () => {
     console.log(currentClaim)
     //console.log(sdrVC)
     const jsonObject = JSON.parse(sdrVC).credentialSubject
     let claim = {}
-    Object.entries(jsonObject).forEach(([key, value]) => {
-      console.log('"'+key+'"');
-      if(currentClaim=='"'+key+'"'){
-        claim[key]=value
-      }
-      // Output:
-      // key1 value1
-      // key2 value2
-      // key3 value3
-    });
+    //let item=currentClaim[0]
+    for(const item of currentClaim){
+      Object.entries(jsonObject).forEach(([key, value]) => {
+        console.log('"'+key+'"');
+        console.log(item==key)
+        if(item==key){
+          claim[key]=value
+          console.log(claim)
+
+        }
+        // Output:
+        // key1 value1
+        // key2 value2
+        // key3 value3
+      });
+  }
     console.log(claim)
     createSDR(claim,sdrVC)
     //setModalVCCurrent2(true)
@@ -329,6 +359,7 @@ const saveData = async (data) => {
   }
 
   const  getSDR= async (value) => {
+    setCurrentClaim([])
     setSdrVC(value)
     console.log(JSON.parse(value).credentialSubject)
     const jsonObject = JSON.parse(value).credentialSubject
@@ -349,6 +380,11 @@ const saveData = async (data) => {
     
     //setModalVCCurrent2(true)
     setModalClaimVisible(true)
+
+  }
+  const  presentations= async () => {
+    setVCCurrent2([])
+    setModalVPVisible(true)
 
   }
   const  requestVerification= async () => {
@@ -531,7 +567,7 @@ const saveData = async (data) => {
 
           <View>
           {dataClaim.map(([key, value]) => (
-          <Button title={key} onPress={() => setCurrentClaim(value)} >
+          <Button title={key} onPress={() => setCurrentClaims(value)} >
             {key}: {value}
           </Button>
           ))}
@@ -756,7 +792,7 @@ const saveData = async (data) => {
 
         <Button title={'New DID'} onPress={() => setModalDIDVisible(true)}  />
         <Button title={'Request'} onPress={() => setModalVCVisible(true)}  />
-        <Button title={'Present'} onPress={() => setModalVPVisible(true)}  />
+        <Button title={'Present'} onPress={() => presentations()}  />
         <Button title={'Verify'} onPress={() => setModalVerifyVisible(true)}  />
         <Button title={'SDR'} onPress={() => setModalSDRVisible(true)}  />
 
